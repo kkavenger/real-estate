@@ -8,4 +8,5 @@ router.get('/', test);
 router.post('/update/:id', verifyToken, update);
 router.delete('/delete/:id', verifyToken, deleteUser);
 
+
 export default router;

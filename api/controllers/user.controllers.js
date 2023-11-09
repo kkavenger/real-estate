@@ -43,6 +43,7 @@ export const update = async (req, res, next) => {
     }
     try {
       await User.findByIdAndDelete(req.params.id);
+      //function to delete cookies
       res.clearCookie('access_token');
       res.status(200).json('User has been deleted');
     } catch (error) {
