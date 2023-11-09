@@ -2,16 +2,20 @@ import { useEffect, useRef, useState } from 'react'//This we make to update the 
 import { useSelector } from 'react-redux'//To get the informaton from redux toolkit
 import { getDownloadURL, getStorage, ref, uploadBytesResumable } from 'firebase/storage'
 import { app } from '../firebase.js'
+import { updateUserStart, updateUserSuccess, updateUserFailure } from '../redux/user/userSlice.js'
+import { useDispatch } from 'react-redux'
 
 export default function Profile() {
   //We initialize the filereference
   const fileref = useRef(null);
   //Get the Information of currentuser from redux toolkit
-  const { currentUser } = useSelector((state) => state.user)
+  const { currentUser, loading, error } = useSelector((state) => state.user)
   const [file, setfile] = useState(undefined)
   const [fileperc, setfileperc] = useState(0)
   const [fileUploaderror, setfileuploaderror] = useState(false)
   const [formdata, setFormdata] = useState({});
+  const [updateSuccess, setUpdateSuccess] = useState(false)
+  const dispatch = useDispatch()
   console.log(file)
   console.log(fileperc)
   console.log(fileUploaderror)
@@ -45,10 +49,38 @@ export default function Profile() {
       getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => setFormdata({ ...formdata, avatar: downloadURL }))
     })
   }
+  //Function to handle changes in the form
+  const handleChange = (e) => {
+    setFormdata({ ...formdata, [e.target.id] : e.target.value })
+  }
+  //Funtion fire when the form gets submitted
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      dispatch(updateUserStart());
+      const res = await fetch(`/api/user/update/${currentUser._id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formdata),
+      });
+      const data = await res.json();
+      if (data.success === false) {
+        dispatch(updateUserFailure(data.message));
+        return;
+      }
+
+      dispatch(updateUserSuccess(data));
+      setUpdateSuccess(true);
+    } catch (error) {
+      dispatch(updateUserFailure(error.message));
+    }
+  };
   return (
     <div className='p-3 max-w-lg mx-auto'>
       <h1 className='text-3xl font-semibold text-center my-7'>Profile</h1>
-      <form className='flex flex-col gap-4'>
+      <form onSubmit = {handleSubmit} className='flex flex-col gap-4'>
         <input onChange = { (e) => setfile(e.target.files[0] ) } type="file" ref={fileref} hidden accept='image/*'/>
         <img onClick = { () => fileref.current.click() } src={formdata.avatar || currentUser.avatar} alt="profile" className='rounded-full h-24 w-24 object-cover cursor-pointer self-center mt-2'/>
         <p className='text-sm self-center'>
@@ -58,19 +90,21 @@ export default function Profile() {
             <span className = 'text-slate-700'>{`Uploading ${fileperc}%`}</span>
           ) : fileperc === 100 ? (
             <span className = 'text-green-700'>Image Uploading successful!</span>
-          ): (
+          ) : (
             ''
           )}
         </p>
-        <input type='text' placeholder='username' id = 'usename' className='border p-3 rounded-lg'/>
-        <input type='email' placeholder='email' id = 'email' className='border p-3 rounded-lg'/>
-        <input type='password' placeholder='password' id = 'password' className='border p-3 rounded-lg'/>
-        <button className='bg-slate-700 text-white rounded-lg p-3 uppercase hover:opacity-90 disabled:opacity-90'>upadte</button>
+        <input type='text' defaultValue={currentUser.username} onChange = {handleChange} placeholder='username' id = 'username' className='border p-3 rounded-lg'/>
+        <input type='email' defaultValue={currentUser.email} onChange = {handleChange} placeholder='email' id = 'email' className='border p-3 rounded-lg'/>
+        <input type='password' placeholder='password' onChange = {handleChange} id = 'password' className='border p-3 rounded-lg'/>
+        <button disabled = {loading} className='bg-slate-700 text-white rounded-lg p-3 uppercase hover:opacity-90 disabled:opacity-90'>{loading ? 'Loading...' : 'Update'}</button>
       </form>
       <div className='flex justify-between mt-5'>
         <span className='text-red-700 cursor-pointer'>Delete Account</span>
         <span className='text-red-700 cursor-pointer'>Sign Out</span>
       </div>
+      <p className='text-red-700 mt-5'>{error ? error : ''}</p>
+      <p className='text-green-700 mt-5'>{updateSuccess ? 'User Updated Successfuly' : ''}</p>
     </div>
   )
 }
