@@ -9,7 +9,6 @@ export const createListing = async (req, res, next) => {
         next(error);
     }
 };
-
 export const deleteListing = async(req, res, next) => {
     const listings = await listing.findById(req.params.id);
     if(!listings) {
@@ -42,6 +41,17 @@ export const updateListing = async(req, res, next) => {
             { new : true }
         )
         res.status(200).json(updatedlistings)
+    } catch (error) {
+        next(error)
+    }
+}
+export const getListings = async(req, res, next) => {
+    try {
+        const listings = await listing.findById(req.params.id);
+        if(!listings){
+            return next(error(404, 'Listing not found'));
+        }
+        res.status(200).json(listings)
     } catch (error) {
         next(error)
     }
