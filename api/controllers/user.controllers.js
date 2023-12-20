@@ -66,3 +66,12 @@ export const update = async (req, res, next) => {
       return next(error(401, 'You can only view your own listing'));
     }
   }
+  export const getUser = async(req, res, next) => {
+
+    const user = await User.findById(req.params.id);
+    if(!user){
+      return next(error(401, 'User not found'));
+    }
+    const {password: pass, ...rest} = user._doc;
+    res.status(200).json(rest);
+  }
